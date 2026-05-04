@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Инвест-портфель</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Мой инвестиционный портфель</h1>
+        
+        <div class="summary" id="summary">
+            <div class="total-card">
+                <h3>💰 Общий капитал</h3>
+                <div class="total-value" id="totalCapital">0 ₽</div>
+            </div>
+        </div>
+
+<div class="controls">
+    <button id="saveBtn" class="btn btn-save">💾 Сохранить всё</button>
+    <button id="loadBtn" class="btn btn-load">📂 Загрузить из файла</button>
+    <button id="refreshPricesBtn" class="btn btn-refresh">🔄 Обновить цены (Мосбиржа)</button>
+</div>
+
+        <div id="brokersContainer"></div>
+
+        <button id="addBrokerBtn" class="btn btn-add-broker">➕ Добавить брокера</button>
+    </div>
+
+    <!-- Модальное окно для добавления брокера -->
+    <div id="modalBroker" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Добавить брокера</h3>
+            <input type="text" id="brokerName" placeholder="Название брокера (например Тинькофф)" class="modal-input">
+            <button id="confirmBrokerBtn" class="btn-modal">Добавить</button>
+        </div>
+    </div>
+
+    <!-- Модальное окно для добавления счёта -->
+    <div id="modalAccount" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Добавить счёт</h3>
+            <input type="text" id="accountName" placeholder="Название счёта (например ИИС, Брокерский)" class="modal-input">
+            <select id="accountType" class="modal-input">
+                <option value="broker">Брокерский счёт</option>
+                <option value="bank">Банковский / Накопительный</option>
+            </select>
+            <button id="confirmAccountBtn" class="btn-modal">Добавить</button>
+        </div>
+    </div>
+
+<!-- Модальное окно для добавления актива -->
+<div id="modalAsset" class="modal">
+    <div class="modal-content" style="width: 450px;">
+        <span class="close">&times;</span>
+        <h3>➕ Добавить актив</h3>
+        
+        <!-- Поле с автокомплитом -->
+        <input type="text" id="assetTicker" placeholder="🔍 Введите тикер (SBER, YNDX, FXRL...)" class="modal-input" autocomplete="off">
+        <div id="tickerSuggestions" style="display:none; border:1px solid #cbd5e1; border-radius:8px; max-height:200px; overflow-y:auto; margin-bottom:12px; background:white;"></div>
+        
+        <input type="text" id="assetName" placeholder="Название (подтянется автоматически)" class="modal-input" readonly style="background:#f1f5f9;">
+        <input type="number" id="assetQuantity" placeholder="Количество (штук)" step="0.0001" class="modal-input">
+        <input type="number" id="assetPrice" placeholder="Цена (₽ или % для облигаций)" class="modal-input" step="0.01">
+        <input type="number" id="assetLotsize" placeholder="Лотность (подтянется автоматически)" class="modal-input" readonly style="background:#f1f5f9;" step="1">
+        
+        <button id="confirmAssetBtn" class="btn-modal">➕ Добавить</button>
+    </div>
+</div>
+
+    <!-- Модальное окно для изменения баланса счёта -->
+    <div id="modalBalance" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>💰 Изменить остаток рублей</h3>
+            <input type="number" id="balanceAmount" placeholder="Сумма (₽)" step="0.01" class="modal-input">
+            <button id="confirmBalanceBtn" class="btn-modal">Сохранить</button>
+        </div>
+    </div>
+
+    <!-- Модальное окно подтверждения удаления -->
+<div id="modalConfirm" class="modal">
+    <div class="modal-content" style="max-width: 400px;">
+        <span class="close">&times;</span>
+        <h3 id="confirmTitle">⚠️ Подтверждение</h3>
+        <p id="confirmMessage" style="margin: 20px 0; font-size: 16px;">Вы уверены?</p>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button id="confirmNoBtn" class="btn-modal" style="background: #64748b;">Отмена</button>
+            <button id="confirmYesBtn" class="btn-modal" style="background: #ef4444;">Удалить</button>
+        </div>
+    </div>
+</div>
+
+<!-- Модалка добавления банка -->
+<div id="modalBank" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>🏛️ Добавить банк</h3>
+        <input type="text" id="bankName" placeholder="Название банка" class="modal-input">
+        <button id="confirmBankBtn" class="btn-modal">Добавить</button>
+    </div>
+</div>
+
+<!-- Модалка изменения баланса банка -->
+<div id="modalBankBalance" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>💰 Изменить баланс</h3>
+        <input type="number" id="bankBalanceAmount" placeholder="Сумма (₽)" step="0.01" class="modal-input">
+        <button id="confirmBankBalanceBtn" class="btn-modal">Сохранить</button>
+    </div>
+</div>
+
+<!-- Модалка добавления банковского счёта (расширенная) -->
+<div id="modalBankAccount" class="modal">
+    <div class="modal-content" style="width: 500px;">
+        <span class="close">&times;</span>
+        <h3>📁 Добавить банковский счёт</h3>
+        
+        <select id="bankAccountType" class="modal-input">
+            <option value="savings">💰 Накопительный счёт</option>
+            <option value="deposit">🏦 Вклад</option>
+            <option value="card">💳 Дебетовая карта</option>
+            <option value="credit">⚠️ Кредитная карта</option>
+        </select>
+        
+        <input type="text" id="bankAccountName" placeholder="Название счёта" class="modal-input">
+        <input type="number" id="bankAccountBalance" placeholder="Баланс (₽)" step="0.01" class="modal-input">
+        
+        <div id="bankExtraFields" style="display: none;">
+            <input type="number" id="bankInterestRate" placeholder="Процентная ставка (% годовых)" step="0.1" class="modal-input">
+            
+            <select id="bankInterestCondition" class="modal-input">
+                <option value="min_balance">На минимальный остаток за месяц</option>
+                <option value="daily_balance">На ежедневный остаток</option>
+                <option value="fix">Фиксированный (вклад)</option>
+            </select>
+            
+            <select id="bankInterestPayment" class="modal-input">
+                <option value="monthly">Ежемесячно</option>
+                <option value="daily">Ежедневно</option>
+                <option value="at_end">В конце срока</option>
+            </select>
+            
+            <input type="number" id="bankCreditLimit" placeholder="Кредитный лимит (₽)" step="0.01" class="modal-input">
+        </div>
+        
+        <button id="confirmBankAccountBtn" class="btn-modal">Добавить</button>
+    </div>
+</div>
+
+<!-- Модалка редактирования банковского счёта -->
+<div id="modalBankAccountEdit" class="modal">
+    <div class="modal-content" style="width: 500px;">
+        <span class="close">&times;</span>
+        <h3>✏️ Редактировать счёт</h3>
+        <input type="number" id="editBankBalance" placeholder="Баланс (₽)" step="0.01" class="modal-input">
+        <input type="number" id="editBankInterestRate" placeholder="Процентная ставка" step="0.1" class="modal-input">
+        <button id="confirmBankAccountEditBtn" class="btn-modal">Сохранить</button>
+    </div>
+</div>
+
+    <script src="script.js"></script>
+</body>
+</html>

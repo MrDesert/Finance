@@ -1,0 +1,139 @@
+{
+  "brokers": [
+    {
+      "id": "broker_tinkoff",
+      "name": "Тинькофф Инвестиции",
+      "accounts": [
+        {
+          "id": "acc_tinkoff_broker",
+          "name": "Брокерский счёт",
+          "balance": 150750.50,
+          "assets": [
+            {
+              "id": "ast_sber",
+              "ticker": "SBER",
+              "name": "Сбербанк",
+              "quantity": 25,
+              "price": 301.50,
+              "lotsize": 10
+            },
+            {
+              "id": "ast_yndx",
+              "ticker": "YNDX",
+              "name": "Яндекс",
+              "quantity": 8,
+              "price": 4120.00,
+              "lotsize": 1
+            },
+            {
+              "id": "ast_lkoh",
+              "ticker": "LKOH",
+              "name": "Лукойл",
+              "quantity": 3,
+              "price": 7100.00,
+              "lotsize": 1
+            },
+            {
+              "id": "ast_tgld",
+              "ticker": "TGLD",
+              "name": "Т-Банк Золото (фонд)",
+              "quantity": 50,
+              "price": 24.50,
+              "lotsize": 1
+            }
+          ]
+        },
+        {
+          "id": "acc_tinkoff_iis",
+          "name": "ИИС (Индивидуальный)",
+          "balance": 80000.00,
+          "assets": [
+            {
+              "id": "ast_sbrm",
+              "ticker": "SBERP",
+              "name": "Сбербанк-преф",
+              "quantity": 15,
+              "price": 280.30,
+              "lotsize": 10
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "broker_vtb",
+      "name": "ВТБ Инвестиции",
+      "accounts": [
+        {
+          "id": "acc_vtb_broker",
+          "name": "Основной счёт",
+          "balance": 45000.00,
+          "assets": [
+            {
+              "id": "ast_gazp",
+              "ticker": "GAZP",
+              "name": "Газпром",
+              "quantity": 100,
+              "price": 160.25,
+              "lotsize": 10
+            },
+            {
+              "id": "ast_sbmx",
+              "ticker": "SBMX",
+              "name": "Сбер БПИФ",
+              "quantity": 30,
+              "price": 18.70,
+              "lotsize": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "broker_alon",
+      "name": "Алон Инвестиции (тестовый)",
+      "accounts": [
+        {
+          "id": "acc_alon_new",
+          "name": "Новый счёт",
+          "balance": 10000.00,
+          "assets": []
+        }
+      ]
+    }
+  ],
+  "banks": [
+    {
+      "id": "bank_tbank",
+      "name": "Т-Банк",
+      "accounts": [
+        {
+          "id": "acc_tbank_nakop",
+          "name": "Накопительный счёт",
+          "balance": 125000.00
+        },
+        {
+          "id": "acc_tbank_deposit",
+          "name": "Вклад 6%",
+          "balance": 300000.00
+        }
+      ]
+    },
+    {
+      "id": "bank_sber",
+      "name": "СберБанк",
+      "accounts": [
+        {
+          "id": "acc_sber_debet",
+          "name": "Дебетовая карта",
+          "balance": 45000.00
+        },
+        {
+          "id": "acc_sber_nakop",
+          "name": "СберВклад",
+          "balance": 150000.00
+        }
+      ]
+    }
+  ]
+}
