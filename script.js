@@ -1198,18 +1198,57 @@ async function getMoexLotsize(ticker) {
 // Загрузка всех тикеров (акции + облигации + фонды)
 async function loadAllTickers() {
     const all = [];
+    const uniqueTickers = new Map();
     
-    const categories = [
-        { engine: 'stock', market: 'shares', board: 'tqbr', type: '📈 Акция', limit: 1000 },
-        { engine: 'stock', market: 'bonds', board: 'tqcb', type: '📜 Облигация', limit: 1000 },
-        { engine: 'stock', market: 'shares', board: 'tqtd', type: '📊 Фонд (ETF/БПИФ)', limit: 1000 },
-        { engine: 'stock', market: 'shares', board: 'tqte', type: '📊 Фонд (ETF)', limit: 500 }  // дополнительная доска
+    // 1. ЗАГРУЖАЕМ АКЦИИ И ФОНДЫ (через общий список)
+    console.log('🔄 Загрузка акций и фондов...');
+    const sharesUrl = 'https://iss.moex.com/iss/engines/stock/markets/shares/securities.json?limit=5000';
+    
+    try {
+        const response = await fetch(sharesUrl);
+        const data = await response.json();
+        
+        if (data.securities?.data) {
+            const headers = data.securities.columns;
+            const tickerIndex = headers.findIndex(h => h === 'SECID');
+            const nameIndex = headers.findIndex(h => h === 'SHORTNAME');
+            const typeNameIndex = headers.findIndex(h => h === 'TYPENAME');
+            
+            for (const row of data.securities.data) {
+                const ticker = row[tickerIndex];
+                if (!ticker || ticker.includes('.')) continue;
+                
+                const typeName = typeNameIndex !== -1 ? row[typeNameIndex] : '';
+                const name = row[nameIndex] || ticker;
+                
+                // Определяем тип
+                let type = '📈 Акция';
+                if (typeName === 'ETF' || typeName === 'ETP' || typeName === 'ПИФ' || typeName === 'БПИФ') {
+                    type = '📊 Фонд (ETF/БПИФ)';
+                }
+                
+                if (!uniqueTickers.has(ticker)) {
+                    uniqueTickers.set(ticker, { ticker, name, type });
+                }
+            }
+            
+            console.log(`✅ Загружено акций и фондов: ${uniqueTickers.size}`);
+        }
+    } catch(e) {
+        console.warn('Ошибка загрузки акций/фондов:', e);
+    }
+    
+    // 2. ЗАГРУЖАЕМ ОБЛИГАЦИИ КАК БЫЛО (ОТДЕЛЬНЫЕ ЗАПРОСЫ)
+    console.log('🔄 Загрузка облигаций...');
+    
+    const bondsCategories = [
+        { type: '📜 Облигация (корпоративные)', url: 'https://iss.moex.com/iss/engines/stock/markets/bonds/boards/tqcb/securities.json?limit=2000' },
+        { type: '📜 Облигация (ОФЗ и другие)', url: 'https://iss.moex.com/iss/engines/stock/markets/bonds/boards/tqob/securities.json?limit=2000' }
     ];
     
-    for (let cat of categories) {
+    for (let cat of bondsCategories) {
         try {
-            const url = `https://iss.moex.com/iss/engines/${cat.engine}/markets/${cat.market}/boards/${cat.board}/securities.json?limit=${cat.limit}`;
-            const response = await fetch(url);
+            const response = await fetch(cat.url);
             const data = await response.json();
             
             if (data.securities?.data) {
@@ -1217,38 +1256,100 @@ async function loadAllTickers() {
                 const tickerIndex = headers.findIndex(h => h === 'SECID');
                 const nameIndex = headers.findIndex(h => h === 'SHORTNAME');
                 
-                const tickers = data.securities.data
-                    .filter(row => row[tickerIndex] && !row[tickerIndex].includes('.') && row[tickerIndex].length <= 6)
+                const bonds = data.securities.data
+                    .filter(row => row[tickerIndex] && !row[tickerIndex].includes('.'))
                     .map(row => ({
                         ticker: row[tickerIndex],
                         name: (row[nameIndex] || row[tickerIndex]),
                         type: cat.type
                     }));
                 
-                all.push(...tickers);
+                // Добавляем уникальные облигации
+                let addedCount = 0;
+                for (const bond of bonds) {
+                    if (!uniqueTickers.has(bond.ticker)) {
+                        uniqueTickers.set(bond.ticker, bond);
+                        addedCount++;
+                    }
+                }
+                console.log(`✅ ${cat.type}: загружено ${bonds.length}, добавлено ${addedCount}`);
             }
         } catch(e) {
             console.warn(`Не загружены ${cat.type}:`, e);
         }
     }
     
-    // Убираем дубликаты (один тикер может быть на нескольких досках)
-    const uniqueTickers = new Map();
-    for (const t of all) {
-        if (!uniqueTickers.has(t.ticker)) {
-            uniqueTickers.set(t.ticker, t);
-        }
+    // Преобразуем Map в массив
+    for (const item of uniqueTickers.values()) {
+        all.push(item);
     }
     
-    allTickers = Array.from(uniqueTickers.values());
-    console.log(`✅ Загружено тикеров: ${allTickers.length} (акции/облигации/фонды)`);
+    // Итоговая статистика
+    const stocksCount = all.filter(t => t.type === '📈 Акция').length;
+    const bondsCount = all.filter(t => t.type.includes('📜 Облигация')).length;
+    const fundsCount = all.filter(t => t.type === '📊 Фонд (ETF/БПИФ)').length;
     
-    // Специально известные фонды, если не загрузились
-    const knownETFs = ['FXRL', 'FXRU', 'TMOS', 'SBMX', 'SBMO', 'AKMM', 'EQMX', 'TGLD', 'TRUR', 'VTBR'];
-    for (const etf of knownETFs) {
-        if (!uniqueTickers.has(etf)) {
-            allTickers.push({ ticker: etf, name: etf, type: '📊 Фонд (ETF)' });
+    console.log('\n📊 ИТОГО:');
+    console.log(`📈 Акции: ${stocksCount}`);
+    console.log(`📜 Облигации: ${bondsCount}`);
+    console.log(`✅ Всего тикеров: ${all.length}`);
+    
+    // Выводим примеры фондов для проверки
+    if (fundsCount > 0) {
+        const sampleFunds = all.filter(t => t.type === '📊 Фонд (ETF/БПИФ)').slice(0, 10);
+        console.log('📊 Примеры фондов:', sampleFunds.map(f => f.ticker).join(', '));
+    }
+    
+    allTickers = all;
+    return all;
+}
+
+// Альтернативный метод загрузки фондов
+async function loadFundsAlternative(all) {
+    console.log('\n🔄 Пробуем альтернативный метод загрузки фондов...');
+    
+    try {
+        // Загружаем все инструменты с рынка акций
+        const url = 'https://iss.moex.com/iss/engines/stock/markets/shares/securities.json?limit=5000';
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.securities?.data) {
+            const headers = data.securities.columns;
+            const tickerIndex = headers.findIndex(h => h === 'SECID');
+            const nameIndex = headers.findIndex(h => h === 'SHORTNAME');
+            const primaryBoardIndex = headers.findIndex(h => h === 'PRIMARYBOARDID');
+            
+            // Ищем фонды по префиксам тикеров
+            const fundPrefixes = ['FX', 'SB', 'TR', 'TM', 'AK', 'SBS', 'EQMX'];
+            
+            const funds = data.securities.data
+                .filter(row => {
+                    const ticker = row[tickerIndex];
+                    if (!ticker || ticker.includes('.')) return false;
+                    
+                    // Проверяем префиксы
+                    return fundPrefixes.some(prefix => ticker.startsWith(prefix));
+                })
+                .map(row => ({
+                    ticker: row[tickerIndex],
+                    name: (row[nameIndex] || row[tickerIndex]),
+                    type: '📊 Фонд (ETF/БПИФ)'
+                }));
+            
+            // Добавляем только новые тикеры
+            const existingTickers = new Set(all.map(t => t.ticker));
+            for (const fund of funds) {
+                if (!existingTickers.has(fund.ticker)) {
+                    all.push(fund);
+                }
+            }
+            
+            console.log(`✅ Альтернативный метод: добавлено ${funds.length} фондов`);
+             console.log( funds );
         }
+    } catch(e) {
+        console.warn('Альтернативный метод не сработал:', e);
     }
 }
 
@@ -1296,61 +1397,13 @@ async function selectTicker(tickerData) {
 }
 
 // Загрузка цены и лотности (автоопределение типа бумаги)
-// Загрузка всех тикеров (акции + облигации + фонды)
-async function loadAllTickers() {
-    const all = [];
-    
-    const categories = [
-        { engine: 'stock', market: 'bonds', board: 'tqcb', type: '📜 Облигация (корпоративные)', limit: 2000 },
-        { engine: 'stock', market: 'bonds', board: 'tqob', type: '📜 Облигация (ОФЗ и другие)', limit: 2000 },  // ДОБАВЛЕНО!
-        { engine: 'stock', market: 'shares', board: 'tqbr', type: '📈 Акция', limit: 2000 },
-        { engine: 'stock', market: 'shares', board: 'tqtd', type: '📊 Фонд (ETF/БПИФ)', limit: 2000 }
-    ];
-    
-    for (let cat of categories) {
-        try {
-            const url = `https://iss.moex.com/iss/engines/${cat.engine}/markets/${cat.market}/boards/${cat.board}/securities.json?limit=${cat.limit}`;
-            const response = await fetch(url);
-            const data = await response.json();
-            
-            if (data.securities?.data) {
-                const headers = data.securities.columns;
-                const tickerIndex = headers.findIndex(h => h === 'SECID');
-                const nameIndex = headers.findIndex(h => h === 'SHORTNAME');
-                
-                const tickers = data.securities.data
-                    .filter(row => row[tickerIndex] && !row[tickerIndex].includes('.'))
-                    .map(row => ({
-                        ticker: row[tickerIndex],
-                        name: (row[nameIndex] || row[tickerIndex]),
-                        type: cat.type
-                    }));
-                
-                all.push(...tickers);
-            }
-        } catch(e) {
-            console.warn(`Не загружены ${cat.type}:`, e);
-        }
-    }
-    
-    // Убираем дубликаты
-    const uniqueTickers = new Map();
-    for (const t of all) {
-        if (!uniqueTickers.has(t.ticker)) {
-            uniqueTickers.set(t.ticker, t);
-        }
-    }
-    
-    allTickers = Array.from(uniqueTickers.values());
-    console.log(`✅ Загружено тикеров: ${allTickers.length}`);
-}
-
-// Загрузка цены и лотности (автоопределение типа бумаги)
 async function loadAssetDetails(ticker) {
     const endpoints = [
-        { engine: 'stock', market: 'bonds', board: 'tqob', name: 'облигация', lotsizeField: 'LOTSIZE' },  // ОФЗ и другие
-        { engine: 'stock', market: 'bonds', board: 'tqcb', name: 'облигация', lotsizeField: 'LOTSIZE' },  // корпоративные
-        { engine: 'stock', market: 'shares', board: 'tqtd', name: 'фонд', lotsizeField: 'LOTSIZE' },
+        { engine: 'stock', market: 'shares', board: 'tqtp', name: 'пиф', lotsizeField: 'LOTSIZE' },     // ПИФ/БПИФ
+        { engine: 'stock', market: 'shares', board: 'tqtd', name: 'фонд', lotsizeField: 'LOTSIZE' },   // ETF
+        { engine: 'stock', market: 'shares', board: 'tqte', name: 'фонд', lotsizeField: 'LOTSIZE' },   // ETF доп
+        { engine: 'stock', market: 'bonds', board: 'tqob', name: 'облигация', lotsizeField: 'LOTSIZE' },
+        { engine: 'stock', market: 'bonds', board: 'tqcb', name: 'облигация', lotsizeField: 'LOTSIZE' },
         { engine: 'stock', market: 'shares', board: 'tqbr', name: 'акция', lotsizeField: 'LOTSIZE' }
     ];
     
