@@ -33,84 +33,27 @@ async function loadData() {
 
 function initDemoData() {
     portfolio = {
-        brokers: [
-            {
-                id: 'broker1',
-                name: 'Тинькофф Инвестиции',
-                accounts: [
-                    {
-                        id: 'acc1',
-                        name: 'Брокерский счёт',
-                        balance: 150000,
-                        assets: [
-                            { id: 'ast1', ticker: 'SBER', name: 'Сбербанк', quantity: 10, price: 301.5, lotsize: 1 },
-                            { id: 'ast2', ticker: 'YNDX', name: 'Яндекс', quantity: 5, price: 4120, lotsize: 1 }
-                        ]
-                    },
-                    {
-                        id: 'acc2',
-                        name: 'ИИС',
-                        balance: 50000,
-                        assets: []
-                    }
-                ]
-            }
-        ],
-        banks: [
-            {
-                id: 'bank1',
-                name: 'Т-Банк',
-                accounts: [
-                    {
-                        id: 'bankAcc1',
-                        name: 'Накопительный счёт',
-                        type: 'savings',  // savings, deposit, credit, card
-                        balance: 80000,
-                        interestRate: 12.5,
-                        interestCondition: 'min_balance', // min_balance, daily_balance
-                        interestPayment: 'monthly', // monthly, daily, at_end
-                        creditLimit: null,
-                        hasDebt: false,
-                        debtAmount: 0
-                    },
-                    {
-                        id: 'bankAcc2',
-                        name: 'Вклад 6%',
-                        type: 'deposit',
-                        balance: 200000,
-                        interestRate: 6.0,
-                        interestCondition: 'fix',
-                        interestPayment: 'at_end',
-                        endDate: '2025-12-31'
-                    }
-                ]
-            },
-            {
-                id: 'bank2',
-                name: 'Сбербанк',
-                accounts: [
-                    {
-                        id: 'bankAcc3',
-                        name: 'Дебетовая карта',
-                        type: 'card',
-                        balance: 35000,
-                        interestRate: 5.0,
-                        interestCondition: 'daily_balance',
-                        interestPayment: 'monthly'
-                    },
-                    {
-                        id: 'bankAcc4',
-                        name: 'Кредитная карта',
-                        type: 'credit',
-                        balance: -15000,
-                        creditLimit: 100000,
-                        interestRate: 25.0,
-                        hasDebt: true,
-                        debtAmount: 15000
-                    }
-                ]
-            }
-        ]
+        brokers: [{
+            id: 'broker1', name: 'Брокер',
+            accounts: [{
+                id: 'acc1', name: 'Брокерский счёт', balance: 150000,
+                assets: [{ id: 'ast1', ticker: 'SBER', name: 'Сбербанк', quantity: 10, price: 301.5, lotsize: 1 }]
+            }]
+        }],
+        banks: [{
+            id: 'bank1', name: 'Банк',
+            accounts: [{
+                id: 'bankAcc1', name: 'Накопительный счёт',
+                type: 'savings',  // savings, deposit, credit, card
+                balance: 80000,
+                interestRate: 12.5,
+                interestCondition: 'min_balance', // min_balance, daily_balance
+                interestPayment: 'monthly', // monthly, daily, at_end
+                creditLimit: null,
+                hasDebt: false,
+                debtAmount: 0
+            }]
+        }]
     };
 }
 
@@ -553,11 +496,6 @@ function deleteBank(bankId) {
     );
 }
 
-function showAddAccountModal(brokerId) {
-    currentBrokerId = brokerId;
-    document.getElementById('modalAccount').style.display = 'block';
-}
-
 function confirmAddAccount() {
     const name = document.getElementById('accountName').value.trim();
     const type = document.getElementById('accountType').value;
@@ -620,10 +558,16 @@ function deleteAccount(type, parentId, accountId) {
     );
 }
 
-function showBalanceModal(brokerId, accountId) {
+function showModal(type, brokerId, accountId){
     currentBrokerId = brokerId;
     currentAccountId = accountId;
-    document.getElementById('modalBalance').style.display = 'block';
+    document.getElementById('modal'+type).style.display = 'block';
+}
+
+function showAssetModal(brokerId, accountId) {
+    currentBrokerId = brokerId;
+    currentAccountId = accountId;
+    document.getElementById('modalAsset').style.display = 'block';
 }
 
 function confirmBalance() {
@@ -640,12 +584,6 @@ function confirmBalance() {
     document.getElementById('balanceAmount').value = '';
     document.getElementById('modalBalance').style.display = 'none';
     render();
-}
-
-function showAssetModal(brokerId, accountId) {
-    currentBrokerId = brokerId;
-    currentAccountId = accountId;
-    document.getElementById('modalAsset').style.display = 'block';
 }
 
 async function confirmAddAsset() {
@@ -720,16 +658,9 @@ function updateQuantity(brokerId, accountId, assetId, delta) {
 }
 
 // Определение типа бумаги по тикеру (простое правило)
-function getAssetTypeIcon(ticker) {
-    // Известные фонды/ETF
-    const etfList = ['FXRL', 'FXRU', 'TMOS', 'SBMX', 'SBMO', 'AKMM', 'EQMX', 'TGLD', 'TRUR', 'VTBR'];
-    if (etfList.includes(ticker)) {
-        return '📊';
-    }
-    // Для облигаций — если тикер длинный или начинается с SU/RU
-    if (ticker.length > 6 || ticker.startsWith('SU') || ticker.startsWith('RU')) {
-        return '📜';
-    }
+function getAssetTypeIcon(type) {
+    if(type === "stock"){return '📊'}
+    if(type === "облигация"){return '📜'}
     return '📈';
 }
 
@@ -805,7 +736,7 @@ function render() {
     </div>
 </div>
             <div id="accounts-${broker.id}"></div>
-            <button class="btn-add-account" onclick="showAddAccountModal('${broker.id}')">➕ Добавить счёт</button>
+            <button class="btn-add-account" onclick="showModal('Account','${broker.id}')">➕ Добавить счёт</button>
         `;
         
         const accountsContainer = brokerDiv.querySelector(`#accounts-${broker.id}`);
@@ -823,8 +754,8 @@ function render() {
     <div class="menu-container">
         <button class="menu-btn" onclick="event.stopPropagation(); toggleMenu('account_menu_${account.id}')">⋮</button>
         <div id="account_menu_${account.id}" class="dropdown-menu">
-            <button onclick="showBalanceModal('${broker.id}', '${account.id}')">💰 Изменить баланс</button>
-            <button onclick="showAssetModal('${broker.id}', '${account.id}')">➕ Добавить актив</button>
+            <button onclick="showModal('Balance', '${broker.id}', '${account.id}')">💰 Изменить баланс</button>
+            <button onclick="showModal('Asset', '${broker.id}', '${account.id}')">➕ Добавить актив</button>
             <button class="delete-btn" onclick="deleteAccount('broker', '${broker.id}', '${account.id}')">🗑️ Удалить счёт</button>
         </div>
     </div>
@@ -832,8 +763,8 @@ function render() {
                 <div class="account-balance-row">
                     <div class="account-balance">💰 ${accountTotal.toLocaleString()} ₽</div>
                     <div class="account-actions">
-                        <button class="btn-icon" onclick="showBalanceModal('broker', '${broker.id}', '${account.id}')">💰 Остаток рублей: ${account.balance.toLocaleString()} ₽</button>
-                        <button class="btn-icon" onclick="showAssetModal('${broker.id}', '${account.id}')">➕ Актив</button>
+                        <button class="btn-icon" onclick="showModal('Balance', '${broker.id}', '${account.id}')">💰 Остаток рублей: ${account.balance.toLocaleString()} ₽</button>
+                        <button class="btn-icon" onclick="showModal('Asset', '${broker.id}', '${account.id}')">➕ Актив</button>
                     </div>
                 </div>
             `;
@@ -852,7 +783,7 @@ account.assets.forEach(asset => {
         <div class="asset-item" id="asset_${asset.id}">
             <div class="asset-info">
                 <div class="asset-name">
-                    ${getAssetTypeIcon(asset.ticker)} ${escapeHtml(asset.name)}
+                    ${getAssetTypeIcon(asset.assetType)} ${escapeHtml(asset.name)}
                 </div>
                 <div class="asset-ticker">${asset.ticker}</div>
             </div>
@@ -863,7 +794,7 @@ account.assets.forEach(asset => {
                 </div>
                 <div id="${controlsId}" class="quantity-controls">
                     <button class="qty-minus" onclick="updateQuantity('${broker.id}', '${account.id}', '${asset.id}', -${asset.lotsize || 1})">-${asset.lotsize || 1}</button>
-                    <input type="number" id="qty_input_${asset.id}" class="qty-input" value="${asset.quantity}" step="${asset.lotsize || 1}" onchange="setQuantity('${broker.id}', '${account.id}', '${asset.id}', this.value)">
+                    <input type="number" id="qty_input_${asset.id}" class="qty-input" value="${asset.quantity}" step="${asset.lotsize || 1}">
                     <button class="qty-plus" onclick="updateQuantity('${broker.id}', '${account.id}', '${asset.id}', ${asset.lotsize || 1})">+${asset.lotsize || 1}</button>
                     <button class="edit-mode-btn" onclick="exitEditMode('${asset.id}', '${broker.id}', '${account.id}', '${asset.id}')">✅ Готово</button>
                 </div>
@@ -1071,14 +1002,6 @@ function exitEditMode(assetId, brokerId, accountId, assetIdFull) {
     if (static) static.classList.remove('hide');
 }
 
-// Установить точное количество (из input)
-function setQuantity(brokerId, accountId, assetId, newValue) {
-    // Эта функция теперь вызывается из onchange input
-    // Но сохраняем только когда нажали "Готово"
-    // Поэтому просто сохраняем значение, рендер будет при выходе
-    return;
-}
-
 // // Обновлённая функция updateQuantity (оставляем как была, но с выходом из режима)
 // function updateQuantity(brokerId, accountId, assetId, delta) {
 //     const broker = portfolio.brokers.find(b => b.id === brokerId);
@@ -1278,6 +1201,65 @@ async function loadAllTickers() {
             console.warn(`Не загружены ${cat.type}:`, e);
         }
     }
+
+     // 3. ЗАГРУЖАЕМ ВАЛЮТЫ
+    console.log('🔄 Загрузка валют...');
+    
+    try {
+        // Валюты торгуются на рынке currency
+        const currencyUrl = 'https://iss.moex.com/iss/engines/currency/markets/selt/securities.json?limit=100';
+        const response = await fetch(currencyUrl);
+        const data = await response.json();
+        
+        if (data.securities?.data) {
+            const headers = data.securities.columns;
+            const tickerIndex = headers.findIndex(h => h === 'SECID');
+            const nameIndex = headers.findIndex(h => h === 'SHORTNAME');
+            
+            // Популярные валютные пары для торговли
+            const popularCurrencies = ['USD000UTSTOM', 'EUR000UTSTOM', 'CNY000UTSTOM', 'GBP000UTSTOM', 'CHF000UTSTOM', 'TRY000UTSTOM', 'KZT000UTSTOM', 'BYN000UTSTOM'];
+            
+            const currencies = data.securities.data
+                .filter(row => {
+                    const ticker = row[tickerIndex];
+                    if (!ticker || ticker.includes('.')) return false;
+                    // Оставляем только популярные валюты или все, если нужно
+                    return popularCurrencies.includes(ticker) || ticker.includes('UTSTOM');
+                })
+                .map(row => {
+                    const ticker = row[tickerIndex];
+                    const name = row[nameIndex] || ticker;
+                    
+                    // Красивое название для отображения
+                    let displayName = name;
+                    if (ticker === 'USD000UTSTOM') displayName = 'USD/RUB';
+                    else if (ticker === 'EUR000UTSTOM') displayName = 'EUR/RUB';
+                    else if (ticker === 'CNY000UTSTOM') displayName = 'CNY/RUB';
+                    else if (ticker === 'GBP000UTSTOM') displayName = 'GBP/RUB';
+                    else if (ticker === 'CHF000UTSTOM') displayName = 'CHF/RUB';
+                    else if (ticker === 'TRY000UTSTOM') displayName = 'TRY/RUB';
+                    else if (ticker === 'KZT000UTSTOM') displayName = 'KZT/RUB';
+                    else if (ticker === 'BYN000UTSTOM') displayName = 'BYN/RUB';
+                    
+                    return {
+                        ticker: ticker,
+                        name: displayName,
+                        type: '💱 Валюта'
+                    };
+                });
+            
+            let addedCount = 0;
+            for (const currency of currencies) {
+                if (!uniqueTickers.has(currency.ticker)) {
+                    uniqueTickers.set(currency.ticker, currency);
+                    addedCount++;
+                }
+            }
+            console.log(`✅ Валюты: загружено ${currencies.length}, добавлено ${addedCount}`);
+        }
+    } catch(e) {
+        console.warn('Ошибка загрузки валют:', e);
+    }
     
     // Преобразуем Map в массив
     for (const item of uniqueTickers.values()) {
@@ -1294,63 +1276,8 @@ async function loadAllTickers() {
     console.log(`📜 Облигации: ${bondsCount}`);
     console.log(`✅ Всего тикеров: ${all.length}`);
     
-    // Выводим примеры фондов для проверки
-    if (fundsCount > 0) {
-        const sampleFunds = all.filter(t => t.type === '📊 Фонд (ETF/БПИФ)').slice(0, 10);
-        console.log('📊 Примеры фондов:', sampleFunds.map(f => f.ticker).join(', '));
-    }
-    
     allTickers = all;
     return all;
-}
-
-// Альтернативный метод загрузки фондов
-async function loadFundsAlternative(all) {
-    console.log('\n🔄 Пробуем альтернативный метод загрузки фондов...');
-    
-    try {
-        // Загружаем все инструменты с рынка акций
-        const url = 'https://iss.moex.com/iss/engines/stock/markets/shares/securities.json?limit=5000';
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        if (data.securities?.data) {
-            const headers = data.securities.columns;
-            const tickerIndex = headers.findIndex(h => h === 'SECID');
-            const nameIndex = headers.findIndex(h => h === 'SHORTNAME');
-            const primaryBoardIndex = headers.findIndex(h => h === 'PRIMARYBOARDID');
-            
-            // Ищем фонды по префиксам тикеров
-            const fundPrefixes = ['FX', 'SB', 'TR', 'TM', 'AK', 'SBS', 'EQMX'];
-            
-            const funds = data.securities.data
-                .filter(row => {
-                    const ticker = row[tickerIndex];
-                    if (!ticker || ticker.includes('.')) return false;
-                    
-                    // Проверяем префиксы
-                    return fundPrefixes.some(prefix => ticker.startsWith(prefix));
-                })
-                .map(row => ({
-                    ticker: row[tickerIndex],
-                    name: (row[nameIndex] || row[tickerIndex]),
-                    type: '📊 Фонд (ETF/БПИФ)'
-                }));
-            
-            // Добавляем только новые тикеры
-            const existingTickers = new Set(all.map(t => t.ticker));
-            for (const fund of funds) {
-                if (!existingTickers.has(fund.ticker)) {
-                    all.push(fund);
-                }
-            }
-            
-            console.log(`✅ Альтернативный метод: добавлено ${funds.length} фондов`);
-             console.log( funds );
-        }
-    } catch(e) {
-        console.warn('Альтернативный метод не сработал:', e);
-    }
 }
 
 // Поиск тикеров по вводу
@@ -1396,112 +1323,201 @@ async function selectTicker(tickerData) {
     await loadAssetDetails(tickerData.ticker);
 }
 
-// Загрузка цены и лотности (автоопределение типа бумаги)
 async function loadAssetDetails(ticker) {
-    const endpoints = [
-        { engine: 'stock', market: 'shares', board: 'tqtp', name: 'пиф', lotsizeField: 'LOTSIZE' },     // ПИФ/БПИФ
-        { engine: 'stock', market: 'shares', board: 'tqtd', name: 'фонд', lotsizeField: 'LOTSIZE' },   // ETF
-        { engine: 'stock', market: 'shares', board: 'tqte', name: 'фонд', lotsizeField: 'LOTSIZE' },   // ETF доп
-        { engine: 'stock', market: 'bonds', board: 'tqob', name: 'облигация', lotsizeField: 'LOTSIZE' },
-        { engine: 'stock', market: 'bonds', board: 'tqcb', name: 'облигация', lotsizeField: 'LOTSIZE' },
-        { engine: 'stock', market: 'shares', board: 'tqbr', name: 'акция', lotsizeField: 'LOTSIZE' }
-    ];
+    // Определяем тип актива по тикеру
+    const isBond = ticker.match(/^[A-Z]{2}\d{6}[A-Z]{2}$|^SU\d{6}[A-Z]{0,2}$|^ОФЗ/i);
+    const isEtf = ticker.match(/^FX|^SB|^TR|^TM|^AK/i);
+    const isCurrency = ticker.includes('UTSTOM') || ticker.match(/^USD|^EUR|^CNY|^GBP|^CHF|^TRY|^KZT|^BYN/);
     
-    for (let ep of endpoints) {
-        try {
-            const url = `https://iss.moex.com/iss/engines/${ep.engine}/markets/${ep.market}/boards/${ep.board}/securities/${ticker}.json`;
-            const response = await fetch(url);
-            const data = await response.json();
-            
-            let price = null;
-            let lotsize = 1;
-            let shortName = null;
-            let faceValue = 1000; // Номинал по умолчанию
-            
-            // Получаем номинал для облигаций
-            if (ep.name === 'облигация' && data.securities?.data?.length > 0) {
-                const headers = data.securities.columns;
-                const row = data.securities.data[0];
-                const faceIdx = headers.findIndex(h => h === 'FACEVALUE');
-                if (faceIdx !== -1 && row[faceIdx]) {
-                    faceValue = parseFloat(row[faceIdx]);
-                }
-            }
-            
-            // Пытаемся найти цену
-            if (data.marketdata?.data?.length > 0) {
-                const headers = data.marketdata.columns;
-                const row = data.marketdata.data[0];
-                
-                const lastIdx = headers.findIndex(h => h === 'LAST');
-                const closeIdx = headers.findIndex(h => h === 'CLOSE');
-                
-                if (lastIdx !== -1 && row[lastIdx] && !isNaN(parseFloat(row[lastIdx]))) {
-                    price = parseFloat(row[lastIdx]);
-                } else if (closeIdx !== -1 && row[closeIdx] && !isNaN(parseFloat(row[closeIdx]))) {
-                    price = parseFloat(row[closeIdx]);
-                } else if (row[2] && !isNaN(parseFloat(row[2]))) {
-                    price = parseFloat(row[2]);
-                }
-            }
-            
-            if (!price && data.securities?.data?.length > 0) {
-                const headers = data.securities.columns;
-                const row = data.securities.data[0];
-                const prevPriceIdx = headers.findIndex(h => h === 'PREVPRICE');
-                if (prevPriceIdx !== -1 && row[prevPriceIdx] && !isNaN(parseFloat(row[prevPriceIdx]))) {
-                    price = parseFloat(row[prevPriceIdx]);
-                }
-            }
-            
-            // Лотность и название
-            if (data.securities?.data?.length > 0) {
-                const headers = data.securities.columns;
-                const row = data.securities.data[0];
-                
-                const lotsizeIdx = headers.findIndex(h => h === 'LOTSIZE');
-                if (lotsizeIdx !== -1 && row[lotsizeIdx]) {
-                    lotsize = parseInt(row[lotsizeIdx]);
-                    if (lotsize < 1) lotsize = 1;
-                }
-                
-                const nameIdx = headers.findIndex(h => h === 'SHORTNAME');
-                if (nameIdx !== -1 && row[nameIdx]) {
-                    shortName = row[nameIdx];
-                }
-            }
-            
-            if (price && price > 0) {
-                let displayPrice = price;
-                let displayName = shortName || ticker;
-                const typeIcon = ep.name === 'акция' ? '📈' : (ep.name === 'облигация' ? '📜' : '📊');
-                
-                // КОНВЕРТАЦИЯ ДЛЯ ОБЛИГАЦИЙ
-                if (ep.name === 'облигация') {
-                    // Цена в процентах от номинала → в рубли
-                    const priceInRub = (price / 100) * faceValue;
-                    displayPrice = priceInRub;
-                    document.getElementById('assetPrice').value = displayPrice.toFixed(2);
-                    document.getElementById('assetName').value = `${displayName} ${typeIcon} (${price.toFixed(2)}% от ${faceValue}₽)`;
-                } else {
-                    document.getElementById('assetPrice').value = displayPrice.toFixed(2);
-                    document.getElementById('assetName').value = `${displayName} ${typeIcon}`;
-                }
-                
-                document.getElementById('assetLotsize').value = lotsize;
-                window.lastAssetType = ep.name;
-                return;
-            }
-        } catch(e) {
-            // Идём дальше
-        }
+    let url = '';
+    
+    // Выбираем правильный эндпоинт
+    if (isBond) {
+        // Облигации грузим с рынка bonds
+        url = `https://iss.moex.com/iss/engines/stock/markets/bonds/securities/${ticker}.json`;
+    } else if (isCurrency) {
+        // Валюты грузим с рынка currency
+        url = `https://iss.moex.com/iss/engines/currency/markets/selt/securities/${ticker}.json`;
+    } else {
+        // Акции и фонды с рынка shares
+        url = `https://iss.moex.com/iss/engines/stock/markets/shares/securities/${ticker}.json`;
     }
     
-    document.getElementById('assetPrice').value = '';
-    document.getElementById('assetLotsize').value = '1';
-    showNotification(`❌ Не удалось получить цену для ${ticker}. Введите вручную.`, '#f59e0b', 4000);
+    try {
+        console.log(`🔍 Загружаем данные для ${ticker}...`);
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        let price = null;
+        let shortName = null;
+        let lotsize = 1;
+        
+        // ========== ПРАВИЛЬНОЕ ПОЛУЧЕНИЕ ЦЕНЫ ==========
+        if (data.marketdata?.data?.length > 0) {
+            const headers = data.marketdata.columns;
+            const row = data.marketdata.data[0];
+            
+            // Пробуем разные поля в правильном порядке
+            const priceFields = ['LAST', 'CURRENTPRICE', 'CLOSE', 'WAPRICE', 'OPEN'];
+            
+            for (const field of priceFields) {
+                const idx = headers.findIndex(h => h === field);
+                if (idx !== -1 && row[idx] && !isNaN(parseFloat(row[idx]))) {
+                    price = parseFloat(row[idx]);
+                    console.log(`✅ Нашли цену в поле ${field}: ${price}`);
+                    break;
+                }
+            }
+            
+            // Для валют отдельная проверка (часто цена в поле 'LAST' или 'SETTLEMENTPRICE')
+            if (isCurrency && !price) {
+                const settleIdx = headers.findIndex(h => h === 'SETTLEMENTPRICE');
+                if (settleIdx !== -1 && row[settleIdx] && !isNaN(parseFloat(row[settleIdx]))) {
+                    price = parseFloat(row[settleIdx]);
+                    console.log(`✅ Нашли цену валюты в SETTLEMENTPRICE: ${price}`);
+                }
+            }
+            
+            // Если цена не найдена, пробуем PREVPRICE (предыдущее закрытие)
+            if (!price) {
+                const prevIdx = headers.findIndex(h => h === 'PREVPRICE');
+                if (prevIdx !== -1 && row[prevIdx] && !isNaN(parseFloat(row[prevIdx]))) {
+                    price = parseFloat(row[prevIdx]);
+                    console.log(`✅ Используем PREVPRICE: ${price}`);
+                }
+            }
+        }
+        
+        // Если цена не найдена в marketdata, пробуем из securities
+        if (!price && data.securities?.data?.length > 0) {
+            const headers = data.securities.columns;
+            const row = data.securities.data[0];
+            
+            // Пробуем PREVADMITTEDQUOTE или PREVPRICE
+            const prevIdx = headers.findIndex(h => h === 'PREVADMITTEDQUOTE');
+            const prevPriceIdx = headers.findIndex(h => h === 'PREVPRICE');
+            
+            if (prevIdx !== -1 && row[prevIdx] && !isNaN(parseFloat(row[prevIdx]))) {
+                price = parseFloat(row[prevIdx]);
+                console.log(`✅ Нашли цену в securities.PREVADMITTEDQUOTE: ${price}`);
+            } else if (prevPriceIdx !== -1 && row[prevPriceIdx] && !isNaN(parseFloat(row[prevPriceIdx]))) {
+                price = parseFloat(row[prevPriceIdx]);
+                console.log(`✅ Нашли цену в securities.PREVPRICE: ${price}`);
+            }
+        }
+        
+        // ========== ПОЛУЧАЕМ НАЗВАНИЕ ==========
+        if (data.description?.data?.length > 0) {
+            const headers = data.description.columns;
+            const row = data.description.data[0];
+            const nameIdx = headers.findIndex(h => h === 'SHORTNAME');
+            const fullNameIdx = headers.findIndex(h => h === 'NAME');
+            
+            if (nameIdx !== -1 && row[nameIdx]) {
+                shortName = row[nameIdx];
+            } else if (fullNameIdx !== -1 && row[fullNameIdx]) {
+                shortName = row[fullNameIdx];
+            }
+        } else if (data.securities?.data?.length > 0) {
+            const headers = data.securities.columns;
+            const row = data.securities.data[0];
+            const shortNameIdx = headers.findIndex(h => h === 'SHORTNAME');
+            
+            if (shortNameIdx !== -1 && row[shortNameIdx]) {
+                shortName = row[shortNameIdx];
+            }
+        }
+        
+        // Для валют делаем красивое название, если не нашли
+        if (isCurrency && !shortName) {
+            if (ticker === 'USD000UTSTOM') shortName = 'USD/RUB';
+            else if (ticker === 'EUR000UTSTOM') shortName = 'EUR/RUB';
+            else if (ticker === 'CNY000UTSTOM') shortName = 'CNY/RUB';
+            else if (ticker === 'GBP000UTSTOM') shortName = 'GBP/RUB';
+            else if (ticker === 'CHF000UTSTOM') shortName = 'CHF/RUB';
+            else if (ticker === 'TRY000UTSTOM') shortName = 'TRY/RUB';
+            else if (ticker === 'KZT000UTSTOM') shortName = 'KZT/RUB';
+            else if (ticker === 'BYN000UTSTOM') shortName = 'BYN/RUB';
+            else shortName = ticker.replace('000UTSTOM', '/RUB');
+        }
+        
+        // ========== ПОЛУЧАЕМ ЛОТНОСТЬ ==========
+        if (data.securities?.data?.length > 0) {
+            const headers = data.securities.columns;
+            const row = data.securities.data[0];
+            const lotsizeIdx = headers.findIndex(h => h === 'LOTSIZE');
+            const faceValueIdx = headers.findIndex(h => h === 'FACEVALUE'); // для облигаций
+            
+            if (lotsizeIdx !== -1 && row[lotsizeIdx]) {
+                lotsize = parseInt(row[lotsizeIdx]);
+            }
+            
+            // Для валют лотность обычно 1
+            if (isCurrency && lotsize === 1) {
+                // У валют лотность может быть 1000, но оставляем как есть
+                console.log(`💰 Лотность валюты: ${lotsize}`);
+            }
+            
+            // Для облигаций номинал может быть нужен
+            if (isBond && faceValueIdx !== -1 && row[faceValueIdx]) {
+                const faceValue = parseFloat(row[faceValueIdx]);
+                if (faceValue && !price) {
+                    price = faceValue; // Если нет цены, используем номинал
+                    console.log(`✅ Используем номинал облигации: ${price}`);
+                }
+            }
+            
+            if (lotsize < 1) lotsize = 1;
+        }
+        
+        // Для валют, если цена всё ещё не найдена, пробуем отдельный запрос к orderbook
+        if (isCurrency && !price) {
+            try {
+                const orderbookUrl = `https://iss.moex.com/iss/engines/currency/markets/selt/securities/${ticker}/orderbook.json`;
+                const obResponse = await fetch(orderbookUrl);
+                const obData = await obResponse.json();
+                
+                if (obData.orderbook?.data?.length > 0) {
+                    const headers = obData.orderbook.columns;
+                    const row = obData.orderbook.data[0];
+                    const lastIdx = headers.findIndex(h => h === 'LAST');
+                    const bidIdx = headers.findIndex(h => h === 'BID');
+                    const askIdx = headers.findIndex(h => h === 'OFFER');
+                    
+                    if (lastIdx !== -1 && row[lastIdx]) {
+                        price = parseFloat(row[lastIdx]);
+                        console.log(`✅ Нашли цену валюты в orderbook.LAST: ${price}`);
+                    } else if (bidIdx !== -1 && row[bidIdx]) {
+                        price = parseFloat(row[bidIdx]);
+                        console.log(`✅ Нашли цену валюты в orderbook.BID: ${price}`);
+                    } else if (askIdx !== -1 && row[askIdx]) {
+                        price = parseFloat(row[askIdx]);
+                        console.log(`✅ Нашли цену валюты в orderbook.OFFER: ${price}`);
+                    }
+                }
+            } catch(obErr) {
+                console.warn('Не удалось загрузить orderbook для валюты:', obErr);
+            }
+        }
+        
+        // Обновляем форму
+        if (price && price > 0) {
+            document.getElementById('assetPrice').value = price.toFixed(4); // Для валют 4 знака
+            document.getElementById('assetName').value = shortName || ticker;
+            document.getElementById('assetLotsize').value = lotsize;
+            console.log(`✅ Загружено: ${ticker} | Цена: ${price} | Лотность: ${lotsize}`);
+        } else {
+            throw new Error('Цена не найдена');
+        }
+        
+    } catch(e) {
+        console.warn(`⚠️ Ошибка загрузки ${ticker}:`, e);
+        document.getElementById('assetPrice').value = '';
+        document.getElementById('assetLotsize').value = '1';
+        document.getElementById('assetName').value = ticker;
+        showNotification(`❌ Не удалось получить цену для ${ticker}. Введите вручную.`, '#f59e0b', 4000);
+    }
 }
-
 // Показать модалку добавления банка
 function showAddBankModal() {
     document.getElementById('modalBank').style.display = 'block';
@@ -1525,13 +1541,6 @@ function confirmAddBank() {
     document.getElementById('modalBank').style.display = 'none';
     render();
     showNotification(`🏛️ Банк "${name}" добавлен`, '#10b981');
-}
-
-// Показать модалку изменения баланса банка
-function showBankBalanceModal(bankId, accountId) {
-    currentBankId = bankId;
-    currentBankAccountId = accountId;
-    document.getElementById('modalBankBalance').style.display = 'block';
 }
 
 // Подтверждение изменения баланса банка
@@ -1655,9 +1664,7 @@ if (lastFile) {
     window.deleteAccount = deleteAccount;
     window.updateQuantity = updateQuantity;
     window.refreshSinglePrice = refreshSinglePrice;
-    window.showAddAccountModal = showAddAccountModal;
-    window.showBalanceModal = showBalanceModal;
-    window.showAssetModal = showAssetModal;
+    window.showModal = showModal;
     window.deleteAsset = deleteAsset;
     window.toggleMenu = toggleMenu;
     window.lastAssetType = null;
@@ -1716,34 +1723,4 @@ function highlightSuggestion(index, items) {
         item.style.background = i === index ? '#e2e8f0' : 'white';
     });
 }
-
-// // Показать модалку подтверждения
-// function showConfirmModal(title, message, onConfirm) {
-//     document.getElementById('confirmTitle').innerText = title;
-//     document.getElementById('confirmMessage').innerHTML = message;
-//     pendingDeleteAction = onConfirm;
-//     document.getElementById('modalConfirm').style.display = 'block';
-// }
-
-// // Скрыть модалку
-// function hideConfirmModal() {
-//     document.getElementById('modalConfirm').style.display = 'none';
-//     pendingDeleteAction = null;
-// }
-
-// При открытии модалки очищаем автокомплит
-const modalAsset = document.getElementById('modalAsset');
-const originalModalDisplay = modalAsset.style.display;
-window.oldShowAssetModal = window.showAssetModal;
-window.showAssetModal = function(brokerId, accountId) {
-    document.getElementById('assetTicker').value = '';
-    document.getElementById('assetName').value = '';
-    document.getElementById('assetQuantity').value = '';
-    document.getElementById('assetPrice').value = '';
-    document.getElementById('assetLotsize').value = '';
-    document.getElementById('tickerSuggestions').style.display = 'none';
-    currentBrokerId = brokerId;
-    currentAccountId = accountId;
-    modalAsset.style.display = 'block';
-};
 };
