@@ -464,38 +464,6 @@ function confirmAddBroker() {
     showNotification(`➕ Брокер "${name}" добавлен`, '#667eea');
 }
 
-function deleteBroker(brokerId) {
-    const broker = portfolio.brokers.find(b => b.id === brokerId);
-    if (!broker) return;
-    
-    showConfirmModal(
-        '🗑️ Удалить брокера?',
-        `Вы действительно хотите удалить брокера <strong>${escapeHtml(broker.name)}</strong>?<br>Все счета и активы внутри будут удалены безвозвратно.`,
-        () => {
-            portfolio.brokers = portfolio.brokers.filter(b => b.id !== brokerId);
-            render();
-            showNotification(`🗑️ Брокер "${broker.name}" удалён`, '#ef4444');
-            hideConfirmModal();
-        }
-    );
-}
-
-function deleteBank(bankId) {
-    const bank = portfolio.banks.find(b => b.id === bankId);
-    if (!bank) return;
-    
-    showConfirmModal(
-        '🗑️ Удалить банк?',
-        `Вы действительно хотите удалить банк <strong>${escapeHtml(bank.name)}</strong>?<br>Все счета внутри будут удалены.`,
-        () => {
-            portfolio.banks = portfolio.banks.filter(b => b.id !== bankId);
-            render();
-            showNotification(`🗑️ Банк "${bank.name}" удалён`, '#ef4444');
-            hideConfirmModal();
-        }
-    );
-}
-
 function confirmAddAccount() {
     const name = document.getElementById('accountName').value.trim();
     const type = document.getElementById('accountType').value;
@@ -516,58 +484,72 @@ function confirmAddAccount() {
     render();
 }
 
-function deleteAccount(type, parentId, accountId) {
-    let account = null;
-    let parentName = '';
-    
-    if (type === 'broker') {
-        const broker = portfolio.brokers.find(b => b.id === parentId);
-        if (broker) {
-            account = broker.accounts.find(a => a.id === accountId);
-            parentName = broker.name;
+function deleteActive({type, typeLvl2 = "not", idLvl1, idLvl2}) {
+    let activeLvl2 = null;
+    let name;
+    let Name;
+    let text;
+    let delId;
+
+    const active = portfolio[type].find(b => b.id === idLvl1);
+    if (!active) return;
+    if (typeLvl2 !== "not") {
+        activeLvl2 = active.accounts.find(a => a.id === idLvl2);
+        if (!activeLvl2) return;
+        name = "счёт";
+        Name = "Счёт";
+        text = ` <strong>${escapeHtml(activeLvl2.name)}</strong>? в <strong>${escapeHtml(active.name)}</strong>?<br> Все активы внутри будут удалены безвозвратно.`
+        delId = idLvl2;
+    } else {
+        if(type === "banks"){
+            name = "банк";
+            Name = "Банк";
+        } else if(type === "brokers"){
+            name = "брокер";
+            Name = "Брокер";
         }
-    } else if (type === 'bank') {
-        const bank = portfolio.banks.find(b => b.id === parentId);
-        if (bank) {
-            account = bank.accounts.find(a => a.id === accountId);
-            parentName = bank.name;
-        }
+        text = ` <strong>${escapeHtml(active.name)}</strong>? <br>Все счета внутри будут удалены безвозвратно.`;
+        delId = idLvl1;
     }
     
-    if (!account) return;
-    
     showConfirmModal(
-        '🗑️ Удалить счёт?',
-        `Вы действительно хотите удалить счёт <strong>${escapeHtml(account.name)}</strong> у <strong>${escapeHtml(parentName)}</strong>?`,
+        `🗑️ Удалить ${name}?`,
+        `Вы действительно хотите удалить ${name}${text}`,
         () => {
-            if (type === 'broker') {
-                const broker = portfolio.brokers.find(b => b.id === parentId);
-                if (broker) {
-                    broker.accounts = broker.accounts.filter(a => a.id !== accountId);
-                }
-            } else if (type === 'bank') {
-                const bank = portfolio.banks.find(b => b.id === parentId);
-                if (bank) {
-                    bank.accounts = bank.accounts.filter(a => a.id !== accountId);
-                }
-            }
+            portfolio[type] = portfolio[type].filter(b => b.id !== delId);
             render();
-            showNotification(`🗑️ Счёт "${account.name}" удалён`, '#ef4444');
+            showNotification(`🗑️ ${Name} "${active.name}" удалён`, '#ef4444');
             hideConfirmModal();
         }
     );
+}
+
+function deleteAsset(brokerId, accountId, assetId) {
+    const broker = portfolio.brokers.find(b => b.id === brokerId);
+    if (broker) {
+        const account = broker.accounts.find(a => a.id === accountId);
+        if (account) {
+            const asset = account.assets.find(a => a.id === assetId);
+            if (asset) {
+                showConfirmModal(
+                    '🗑️ Удалить актив?',
+                    `Вы действительно хотите удалить актив<br><strong>${escapeHtml(asset.name)} (${asset.ticker})</strong>?`,
+                    () => {
+                        account.assets = account.assets.filter(a => a.id !== assetId);
+                        render();
+                        showNotification(`🗑️ ${asset.name} удалён`, '#ef4444');
+                        hideConfirmModal();
+                    }
+                );
+            }
+        }
+    }
 }
 
 function showModal(type, brokerId, accountId){
     currentBrokerId = brokerId;
     currentAccountId = accountId;
     document.getElementById('modal'+type).style.display = 'block';
-}
-
-function showAssetModal(brokerId, accountId) {
-    currentBrokerId = brokerId;
-    currentAccountId = accountId;
-    document.getElementById('modalAsset').style.display = 'block';
 }
 
 function confirmBalance() {
@@ -731,7 +713,7 @@ function render() {
     <div class="menu-container">
         <button class="menu-btn" onclick="event.stopPropagation(); toggleMenu('broker_menu_${broker.id}')">⋮</button>
         <div id="broker_menu_${broker.id}" class="dropdown-menu">
-            <button class="delete-btn" onclick="deleteBroker('${broker.id}')">🗑️ Удалить брокера</button>
+            <button class="delete-btn" onclick="deleteActive({type: 'brokers', idLvl1: '${broker.id}'})">🗑️ Удалить брокера</button>
         </div>
     </div>
 </div>
@@ -756,7 +738,7 @@ function render() {
         <div id="account_menu_${account.id}" class="dropdown-menu">
             <button onclick="showModal('Balance', '${broker.id}', '${account.id}')">💰 Изменить баланс</button>
             <button onclick="showModal('Asset', '${broker.id}', '${account.id}')">➕ Добавить актив</button>
-            <button class="delete-btn" onclick="deleteAccount('broker', '${broker.id}', '${account.id}')">🗑️ Удалить счёт</button>
+            <button class="delete-btn" onclick="deleteActive({type: 'brokers', typeLvl2: 'Account', idLvl1: '${broker.id}', idLvl2: '${account.id}'})">🗑️ Удалить счёт</button>
         </div>
     </div>
 </div>
@@ -851,7 +833,7 @@ portfolio.banks.forEach(bank => {
             <div class="menu-container">
                 <button class="menu-btn" onclick="event.stopPropagation(); toggleMenu('bank_menu_${bank.id}')">⋮</button>
                 <div id="bank_menu_${bank.id}" class="dropdown-menu">
-                    <button class="delete-btn" onclick="deleteBank('${bank.id}')">🗑️ Удалить банк</button>
+                    <button class="delete-btn" onclick="deleteActive({type: 'banks', idLvl2: '${bank.id}'})">🗑️ Удалить банк</button>
                 </div>
             </div>
         </div>
@@ -879,7 +861,7 @@ portfolio.banks.forEach(bank => {
                     <div id="bank_account_menu_${account.id}" class="dropdown-menu">
                         <button onclick="editBankAccount('${bank.id}', '${account.id}')">✏️ Редактировать</button>
                         <button onclick="showBankBalanceModal('${bank.id}', '${account.id}')">💰 Изменить баланс</button>
-                        <button class="delete-btn" onclick="deleteAccount('bank', '${bank.id}', '${account.id}')">🗑️ Удалить счёт</button>
+                        <button class="delete-btn" onclick="deleteActive({type: 'banks', typeLvl2: 'Account', idLvl1: '${bank.id}', idLvl2: '${account.id}'})">🗑️ Удалить счёт</button>
                     </div>
                 </div>
             </div>
@@ -1002,41 +984,6 @@ function exitEditMode(assetId, brokerId, accountId, assetIdFull) {
     if (static) static.classList.remove('hide');
 }
 
-// // Обновлённая функция updateQuantity (оставляем как была, но с выходом из режима)
-// function updateQuantity(brokerId, accountId, assetId, delta) {
-//     const broker = portfolio.brokers.find(b => b.id === brokerId);
-//     if (broker) {
-//         const account = broker.accounts.find(a => a.id === accountId);
-//         if (account) {
-//             const asset = account.assets.find(a => a.id === assetId);
-//             if (asset) {
-//                 const newQ = asset.quantity + delta;
-//                 if (newQ >= 0) {
-//                     if (newQ === 0) {
-//                         showConfirmModal('🗑️ Удалить актив?', `Удалить ${asset.name}?`, () => {
-//                             account.assets = account.assets.filter(a => a.id !== assetId);
-//                             render();
-//                             showNotification(`🗑️ ${asset.name} удалён`, '#ef4444');
-//                             hideConfirmModal();
-//                         });
-//                     } else {
-//                         asset.quantity = newQ;
-//                         render();
-//                         // Автоматически выходим из режима редактирования
-//                         const input = document.getElementById(`qty_input_${assetId}`);
-//                         if (input) {
-//                             const controls = document.getElementById(`controls_${assetId}`);
-//                             const static = document.getElementById(`static_${assetId}`);
-//                             if (controls) controls.classList.remove('active');
-//                             if (static) static.classList.remove('hide');
-//                         }
-//                     }
-//                 }
-//             }
-//         }
-//     }
-// }
-
 function confirmBankBalance() {
     const amount = parseFloat(document.getElementById('bankBalanceAmount').value);
     if (isNaN(amount)) return;
@@ -1060,28 +1007,6 @@ function escapeHtml(str) {
         if (m === '>') return '&gt;';
         return m;
     });
-}
-
-function deleteAsset(brokerId, accountId, assetId) {
-    const broker = portfolio.brokers.find(b => b.id === brokerId);
-    if (broker) {
-        const account = broker.accounts.find(a => a.id === accountId);
-        if (account) {
-            const asset = account.assets.find(a => a.id === assetId);
-            if (asset) {
-                showConfirmModal(
-                    '🗑️ Удалить актив?',
-                    `Вы действительно хотите удалить актив<br><strong>${escapeHtml(asset.name)} (${asset.ticker})</strong>?`,
-                    () => {
-                        account.assets = account.assets.filter(a => a.id !== assetId);
-                        render();
-                        showNotification(`🗑️ ${asset.name} удалён`, '#ef4444');
-                        hideConfirmModal();
-                    }
-                );
-            }
-        }
-    }
 }
 
 // Показать модалку подтверждения
@@ -1660,8 +1585,7 @@ if (lastFile) {
         }
     };
     
-    window.deleteBroker = deleteBroker;
-    window.deleteAccount = deleteAccount;
+    window.deleteActive = deleteActive;
     window.updateQuantity = updateQuantity;
     window.refreshSinglePrice = refreshSinglePrice;
     window.showModal = showModal;
